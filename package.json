@@ -1,0 +1,22 @@
+{
+  "name": "qrchain-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "nodemon --watch app --ext ts,json --exec npx ts-node app/server.ts"
+  },
+  "author": "Jonathan cube",
+  "license": "ISC",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.17.0",
+    "@typescript-eslint/parser": "^5.17.0",
+    "eslint": "^8.12.0",
+    "eslint-config-google": "^0.14.0"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.13",
+    "express": "^4.17.3",
+    "ratlogger": "^1.0.1"
+  }
+}
