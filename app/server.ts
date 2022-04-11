@@ -1,7 +1,6 @@
 import express from 'express'
 import { components } from './router/router.module'
 import { loggerConfig, logger } from 'ratlogger'
-import config from '../config.js'
 import ratlogcr from '../.ratlog.js'
 import { Router } from './router/router'
 
