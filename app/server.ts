@@ -1,20 +1,27 @@
+import dotenv from 'dotenv'
 import express from 'express'
-import { components } from './router/router.module'
-import { loggerConfig, logger } from 'ratlogger'
+import { logger, loggerConfig } from 'ratlogger'
 import ratlogcr from '../.ratlog.js'
 import { Router } from './router/router'
-
+import { components } from './router/router.module'
+import { setupConfig, _config } from './utils/configuration'
 const buildStart = performance.now()
-const app = express()
 
-app.use(express.json())
+// setup
+dotenv.config()
+setupConfig()
 loggerConfig(ratlogcr)
+const { port, host } = _config.server
+//
 
-logger.log('\n', '@{bold}Started the server process', '\n')
+const app = express()
+app.use(express.json())
 
 const router = new Router(components())
 router.setup(app)
 router.show()
+
+logger.log('\n', '@{bold}Started the server process', '\n')
 
 app.get('*', (req, res) => {
     res.send({ error: false, msg: 'default response' })
@@ -23,8 +30,8 @@ app.get('*', (req, res) => {
 app.listen(8080, () => {
     logger.log(
         'Server is active on',
-        '@{yellow bold}8080@{normal}',
-        '@{green}=> @{underline}http://localhost:8080@{normal}'
+        `@{yellow bold}${port}@{normal}`,
+        `@{green}=> @{underline}http://${host}:${port}@{normal}`
     )
 })
 
