@@ -5,3 +5,8 @@ export type ExpressArgs = {
     res: Response
     next: NextFunction
 }
+export type MetaRequires = {
+    headers?: string[]
+    params?: string[]
+    body?: string[]
+}
