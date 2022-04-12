@@ -1,10 +1,4 @@
-type Configuration = {
-    server?: {
-        host: string
-        port: number
-        api: string
-    }
-}
+import { Configuration } from '../config/config.d'
 
 export const _config: Configuration = {}
 
