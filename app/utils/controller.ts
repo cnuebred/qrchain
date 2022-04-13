@@ -22,7 +22,6 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
     return (path: string = '', requires?: MetaRequires) => {
         return (target: Object, name: string, f: PropertyDescriptor) => {
             const orginalMethod = f.value
-            console.log('spoko_', name)
             f.value = (args: ExpressArgs) => {
                 const notContains = {}
                 if (requires)
