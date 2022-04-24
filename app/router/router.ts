@@ -4,18 +4,19 @@ import { Leaf, ControllerType as Controller } from './router.d'
 
 type RootPackage<T> = { [index: string]: T }
 
+export const leaf: Leaf[] = []
+
 export class Router {
     components: any[]
     roots: RootPackage<string> = {}
     paths: RootPackage<string> = {}
-    leaf: Leaf[] = []
     metaleaf: RootPackage<number> = {}
     constructor(components: any) {
         this.components = components
         this.unzipRoots()
     }
     show = (): void => {
-        this.leaf.forEach((item) => {
+        leaf.forEach((item) => {
             logger.component(
                 '\n',
                 `#{status_init(component ${item.status})}`,
@@ -62,7 +63,7 @@ export class Router {
                         logger.error(error.message)
                         pcg.status = false
                     }
-                    this.leaf.push(pcg)
+                    leaf.push(pcg)
                     this.generateMetaLeaf(pcg)
                 })
         })
