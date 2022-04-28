@@ -2,8 +2,9 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { logger, loggerConfig } from 'ratlogger'
 import ratlogcr from '../.ratlog.js'
-import { Router } from './router/router'
-import { components } from './router/router.module'
+import { db } from './service/connector.module'
+import { Router } from './service/router'
+import { components } from './service/router.module'
 import { setupConfig, _config } from './utils/configuration'
 const buildStart = performance.now()
 
@@ -12,6 +13,10 @@ dotenv.config()
 setupConfig()
 loggerConfig(ratlogcr)
 const { port, host } = _config.server
+
+//db
+db.connect()
+
 //
 
 const app = express()

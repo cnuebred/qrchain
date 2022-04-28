@@ -5,8 +5,13 @@ export type Configuration = {
         api: string
     }
     db?: {
-        host: string
+        hostname: string
         password: string
         database: string
+        user: string
+    }
+    utils?: {
+        auth_algo: string
+        sec_key: string
     }
 }

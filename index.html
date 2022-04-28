@@ -1,0 +1,42 @@
+<a href="http://localhost:8080/inspector">[home]</a>
+<hr ></hr>
+<style >@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400&display=swap'); body{font-family: 'Montserrat', sans-serif;}</style>
+<style >::-webkit-scrollbar {
+        width: 7.5px;
+        height: 7.5px
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 2px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha512-E8QSvWZ0eCLGk4km3hxSsNmGWbLtSCSUcewDQPQWZF6pEU8GlT8a5fF32wOl1i8ftdMhssTrF/OhyGWwonTcXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<pre ><code id="header">Hello<br>Here is login site to inspector</code></pre>
+<hr ></hr>
+<input id="login" placeholder="login"></input>
+<input id="pass" placeholder="password"></input>
+<button on_click="login">sign in</button>
+<div class="placeholder_footer_qrchain"><p class="footer">by cube ak'a cnuebred</p></div>
+<script>const bee_global_functions_login = {bee_method_login: async (el, event) => {
+        const url = 'http://localhost:8080/inspector/login';
+        const login = document.querySelector('#login');
+        const password = document.querySelector('#pass');
+        const auth = eval(`CryptoJS.SHA256('${login}$${password}').toString()`); // sorry for eval :(
+        const res = await fetch(url, { headers: { auth: auth } });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.pass) {
+                sessionStorage.setItem('token', data.token);
+            }
+        }
+    }}</script>
+<script>document.querySelectorAll('[on_click]').forEach(item => {const attr = item.getAttribute('on_click');item.addEventListener('click', (el) => {bee_global_functions_login['bee_method_'+ attr](item, el)})})</script>
+<script>document.querySelectorAll('[on_move]').forEach(item => {const attr = item.getAttribute('on_move');item.addEventListener('mousemove', (el) => {bee_global_functions_login['bee_method_'+ attr](item, el)})})</script>
+
+<style>pre{background: #1e2124;min-width: auto;overflow-x: auto;border-radius: 3px;color: white;padding: 7.5px;transition: opacity ease 0.4s} pre:hover{opacity: 0.8} hr{border: solid #1e2124 1.75px;background: #1e2124;border-radius: 10px} button#regular_button{border: none;background: #1e2124;border-radius: 3px;color: white;padding: 7.5px;font-family: Montserrat, sans-serif} body{margin: 30px} div.placeholder_footer_qrchain{background: #060b1d;display: flex;white-space: nowrap;margin-top: 100px;justify-content: space-around;border-radius: 5px;color: white}</style>
