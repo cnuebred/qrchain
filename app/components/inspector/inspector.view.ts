@@ -1,11 +1,10 @@
 import { Bee, scheme } from 'cnuebred_bee'
 import { leaf } from '../../service/router'
-import { crypto, footer, nav, onload } from '../views/main_placeholders'
+import { crypto, footer, header, nav, onload } from '../views/main_placeholders'
 
-export const viewInspectorInit = () => {
+export const viewInspectorInit = (auth?) => {
     const init = new Bee('init')
-    init.pushBee(nav)
-    init.pushBee(scheme.base_style())
+    init.pushBee(header(auth))
     init.add('Hello\nHere is inspector for qrchain server', 'code#header').wrap(
         'pre'
     )
@@ -26,21 +25,16 @@ export const viewInspectorInit = () => {
             })
         )
     init.style('.endpoint', { textDecoration: 'none', color: 'white' })
-    init.pushBee(footer)
+    init.pushBee(footer())
     return init.print()
 }
 
-export const viewInspectorLogin = (
-    onload_: boolean = false,
-    ok: string = ''
-) => {
+export const viewInspectorLogin = (auth?) => {
     const login = new Bee('login')
-    login.pushBee(nav)
-    login.pushBee(scheme.base_style())
-    login.pushBee(crypto)
-    if (onload_) login.pushBee(onload())
+    login.pushBee(header(auth))
+    login.pushBee(crypto())
     login
-        .add('Hello\nHere is login site to inspector' + ok, 'code#header')
+        .add('Hello\nHere is login site to inspector', 'code#header')
         .wrap('pre')
     login.add('', 'hr')
     login.add('', 'input#login', { placeholder: 'login', value: 'cube' })
@@ -49,19 +43,26 @@ export const viewInspectorLogin = (
         value: 'qr_cnuebred_code!1002',
     })
     login.add('sign in', 'button', { on_click: 'login' })
-    login.script('login', async (el, event) => {
-        const url = 'http://localhost:8080/inspector/login'
-        const login = document.querySelector('#login')['value']
-        const password = document.querySelector('#pass')['value']
-        console.log(login, password)
-        const auth = eval(`CryptoJS.SHA256('${login}$${password}').toString()`) // sorry for eval :(
+    login.add('sign out', 'button', { on_click: 'logout' })
+    login.script('login', async () => {
+        const url = window.location.href
+        const login = (document.querySelector('#login')['value'] as string).trim()
+        const password = (document.querySelector('#pass')['value'] as string).trim()
+        const token = eval(`CryptoJS.SHA256('${login}$${password}').toString()`) // sorry for eval :(
+        const res = await fetch(url, { headers: { login, token } })
 
-        const res = await fetch(url, { headers: { login: auth } })
         try {
             const pcg = await res.json()
             sessionStorage.setItem('auth', pcg.token)
-        } catch {}
+            window.location.reload()
+        } catch {
+            console.log('access denied')
+        }
     })
-    login.pushBee(footer)
+    login.script('logout', async () => {
+        sessionStorage.removeItem('auth')
+        window.location.reload()
+    })
+    login.pushBee(footer())
     return login.print()
 }

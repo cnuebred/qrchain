@@ -1,3 +1,4 @@
+import { auth } from './auth'
 import { res } from './responses'
 import { ExpressArgs, MetaRequires } from './utils'
 
@@ -21,7 +22,7 @@ const restMethod = (
 const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
     return (path: string = '', requires?: MetaRequires) => {
         return (target: Object, name: string, f: PropertyDescriptor) => {
-            const orginalMethod = f.value
+            const originalMethod = f.value
             f.value = (args: ExpressArgs) => {
                 const notContains = {}
                 if (requires)
@@ -50,18 +51,31 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
                                 .data(notContains).response
                         )
 
-                return orginalMethod(args)
+                return originalMethod(args)
             }
             restMethod(target, name, f, method, path)
         }
     }
 }
 
+export function _auth(
+    transfer: 'headers' | 'query' | 'params' = 'headers',
+    value: string = 'auth'
+) {
+    return (target: Object, name: string, f: PropertyDescriptor) => {
+        const originalMethod = f.value
+        f.value = async (args: ExpressArgs) => {
+            const auth_ = await auth(args.req[transfer][value] as string)
+            return originalMethod({ ...args, auth_ })
+        }
+    }
+}
+
 export function Controller(name: string, parent?: string) {
-    return function <T extends { new (...args: any[]): {} }>(constructor: T) {
+    return function <T extends { new(...args: any[]): {} }>(constructor: T) {
         constructor.prototype['__root__'] = { name, parent }
         constructor.prototype['__name__'] = constructor.name
-        return class extends constructor {}
+        return class extends constructor { }
     }
 }
 

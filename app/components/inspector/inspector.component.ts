@@ -1,9 +1,9 @@
-import { Controller, _get, _post } from '../../utils/controller'
+import { Controller, _auth, _get, _post } from '../../utils/controller'
 import { viewInspectorInit, viewInspectorLogin } from './inspector.view'
-import { randomBytes } from 'crypto'
+import { logger } from 'ratlogger'
 import { db } from '../../service/connector.module'
-import { decodeToken, encodeToken } from '../../utils/crypto'
-import { auth } from '../../utils/auth'
+import { encodeToken } from '../../utils/crypto'
+import { QrMember } from '../../model/inspector.model'
 
 const generateToken = (hash: string) => {
     const token = { hash, date: Date.now() }
@@ -11,48 +11,60 @@ const generateToken = (hash: string) => {
 }
 const setToken = async (hash: string, token: string) => {
     await db.run(async (client) => {
-        await client.query(
-            `update admin_panel set session=\'${token}\' where hash=\'${hash}\'`
-        )
-    })
-}
-const matchPass = async (passHash) => {
-    const pass = await db.run(async (client) => {
-        const user = client.query('select hash, hash_pass from admin_panel')
-        const userData = await user.first()
-
-        return {
-            pass:
-                JSON.stringify(userData.get('hash_pass')) ==
-                JSON.stringify(passHash),
-            hash: userData.get('hash'),
+        try {
+            await client.query(
+                `insert into member_session values ('${hash}', '${token}')`
+            )
+        } catch {
+            try {
+                await client.query(
+                    `update member_session set token_hash = '${token}' where member_hash='${hash}'`
+                )
+            } catch (err) {
+                console.log('set token error')
+            }
         }
     })
-    return pass
+}
+const matchPass = async (username, passHash) => {
+    const user = await db.query<QrMember>
+        (`select hash, pass_hash from qr_member where username=\'${username}\'`)
+    if (user.first())
+        return {
+            pass: JSON.stringify(user.first().pass_hash) == JSON.stringify(passHash),
+            hash: user.first().hash
+        }
+    return null
 }
 
 @Controller('inspector')
 export class Inspector {
     @_get('/')
-    main({ res }) {
+    @_auth()
+    async main({ res, auth_ }) {
+        if (auth_?.pass) {
+            return res.status(200).send(viewInspectorInit(auth_))
+        }
         return res.status(200).send(viewInspectorInit())
     }
     @_get('/login')
-    async login({ res, req }) {
-        console.log('run')
-        console.log(req.headers.auth)
-        if (await auth(req.headers.auth))
+    @_auth()
+    async login({ res, req, auth_ }) {
+        if (auth_?.pass)
+            return res.status(200).send(viewInspectorLogin(auth_))
+
+        if (!req.headers.token)
             return res.status(200).send(viewInspectorLogin())
-        if (!req.headers.login)
-            return res.status(200).send(viewInspectorLogin(true))
-        const { data, error } = await matchPass(req.headers.login)
-        if (error) return res.status(200).send(viewInspectorLogin()) // some failed
-        if (!data.get('pass')) return res.status(200).send(viewInspectorLogin()) // access denide
-        const token = generateToken(data.get('hash'))
-        await setToken(data.get('hash'), token)
+
+        const data = await matchPass(req.headers.login, req.headers.token)
+        if (!data) return res.status(200).send(viewInspectorLogin())
+        if (!data.pass) return res.status(200).send(viewInspectorLogin())
+        const token = generateToken(data.hash)
+        await setToken(data.hash, token)
+        logger.log(`user @{blue}${data.hash}@{green} signed in`)
 
         return res.send({ token })
     }
 }
 @Controller('controller', 'inspector')
-export class AdminController {}
+export class AdminController { }

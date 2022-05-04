@@ -16,9 +16,9 @@ export class Router {
         this.unzipRoots()
     }
     show = (): void => {
+        console.log('\n')
         leaf.forEach((item) => {
             logger.component(
-                '\n',
                 `#{status_init(component ${item.status})}`,
                 ...['rootName', 'name', 'method', 'path'].map((name) => {
                     const space = this.metaleaf[name]
