@@ -8,7 +8,7 @@ module.exports = {
         hostname: 'localhost',
         database: 'qr_code',
         user: 'postgres',
-        password: 'root',
+        password: 'admin',
     },
     utils: {
         auth_algo: 'aes-256-cbc',

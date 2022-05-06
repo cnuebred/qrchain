@@ -11,15 +11,13 @@ const qr_member = [
 ]
 const qr_code = [
     ['hash', 'identifier'],
-    ['owner_hash', 'owner of qr code']
+    ['owner_hash', 'owner of qr code'],
 ]
 const tables = {
     qr_member,
-    qr_code
+    qr_code,
 }
-const insertOptions = [
-    'qr_member', 'qr_code'
-]
+const insertOptions = ['qr_member', 'qr_code']
 
 const insertOptionsBee = (type: string) => {
     const bee = new Component('@0', 'option', { value: '@0' })
@@ -35,8 +33,9 @@ const newInput = () => {
 
     const deleteButton = document.createElement('button')
     deleteButton.textContent = 'DEL'
-    deleteButton.addEventListener('click', () => { deleteButton.parentElement.remove() })
-
+    deleteButton.addEventListener('click', () => {
+        deleteButton.parentElement.remove()
+    })
 
     const container = document.createElement('div')
     container.className = 'insert_container'
@@ -45,29 +44,33 @@ const newInput = () => {
     container.append(deleteButton)
 
     document.querySelector('div.insert_polygon').append(container)
-
 }
 
 const add = async () => {
-    const url = window.location.href + 'add'
+    const url = window.location.href
     const polygon = document.querySelector('div.insert_polygon')
     const obj = {}
     const data = {}
 
     const values = polygon.querySelectorAll('input.value_input_insert')
-    polygon.querySelectorAll('input.key_input_insert')
-        .forEach((item, index) => { data[item['value']] = values[index]?.['value'] })
+    polygon
+        .querySelectorAll('input.key_input_insert')
+        .forEach((item, index) => {
+            data[item['value']] = values[index]?.['value']
+        })
     console.log(data)
 
-    obj['__table__insert__'] = document.querySelector('select.select_table_insert')['value']
+    obj['__table__insert__'] = document.querySelector(
+        'select.select_table_insert'
+    )['value']
     obj['data'] = data
 
     const status = await fetch(url, {
         method: 'POST',
         body: JSON.stringify(obj),
         headers: {
-            'Content-Type': 'application/json'
-        }
+            'Content-Type': 'application/json',
+        },
     })
 
     const statusElement = document.createElement('p')
@@ -77,16 +80,17 @@ const add = async () => {
     } catch {
         statusElement.textContent = '-'
     }
-    document.querySelector('div.insert_status').innerHTML = statusElement.outerHTML
+    document.querySelector('div.insert_status').innerHTML =
+        statusElement.outerHTML
 }
-
 
 const get = async () => {
     const url = window.location.href + 'get_db'
     console.log(url)
     const table = document.querySelector('select.select_table_get')['value']
     if (!table) {
-        document.querySelector('#result').innerHTML = '<p>Table not submitted for selection</p>'
+        document.querySelector('#result').innerHTML =
+            '<p>Table not submitted for selection</p>'
         return
     }
     try {
@@ -94,66 +98,175 @@ const get = async () => {
 
         const sqlTable = await data.json()
         if (!sqlTable || sqlTable.length == 0) {
-            document.querySelector('#result').innerHTML = '<p>Selected table doesn\'t exist</p>'
+            document.querySelector('#result').innerHTML =
+                '<p>Selected table doesn\'t exist</p>'
             return
         }
         const keys = Object.keys(sqlTable[0])
         console.log(keys)
-        const tableKeys = `<tr>${keys.map(item => { return `<th>${item}</th>` }).join('')
-            }</tr>`
+        const tableKeys = `<tr >${keys
+            .map((item) => {
+                return `<th>${item}</th>`
+            })
+            .join('')}</tr>`
 
         const tableValues = sqlTable.map((item, index) => {
-            return '<tr>' + Object.entries(item).map(item_ => {
-                if (item_[1] == null) item_[1] = 'null'
-                return `<td title="${item_[1]}" key="${item_[0]}" row_number="${index}">${item_[1]}</td>`
-            }).join('') + '</tr>'
+            return (
+                '<tr data="true">' +
+                Object.entries(item)
+                    .map((item_) => {
+                        if (item_[1] == null) item_[1] = 'null'
+                        return `<td title="${item_[1]}" key="${item_[0]}" row_number="${index}">${item_[1]}</td>`
+                    })
+                    .join('') +
+                '</tr>'
+            )
         })
-        tableValues.push(`<tr>${keys
-            .map(item => { return `<td><input placeholder="${item}" key="${item}"></input></td>` }).join('')
-            }</tr>`)
+        tableValues.push(
+            `<tr>${keys
+                .map((item) => {
+                    return `<td><input placeholder="${item}" key="${item}"></input></td>`
+                })
+                .join('')}</tr>`
+        )
         const tableElement = document.createElement('table')
         const addButton = document.createElement('button')
+        const deleteButton = document.createElement('button')
+        const updateButton = document.createElement('button')
         tableElement.innerHTML = tableKeys + tableValues.join('')
         addButton.textContent = 'INSERT'
+        deleteButton.textContent = 'DELETE'
+        updateButton.textContent = 'UPDATE'
+
         addButton.addEventListener('click', async () => {
-            const url = window.location.href + 'add'
+            const url = window.location.href
             const polygon = document.querySelector('div#result')
             const obj = {}
             const data = {}
 
-            polygon.querySelectorAll('input')
-                .forEach((item) => { if (item?.['value']) data[item.getAttribute('key')] = item?.['value'] })
+            polygon.querySelectorAll('input').forEach((item) => {
+                if (item?.['value'])
+                    data[item.getAttribute('key')] = item?.['value']
+            })
 
-            obj['__table__insert__'] = document.querySelector('select.select_table_get')['value']
+            obj['__table__insert__'] = document.querySelector(
+                'select.select_table_get'
+            )['value']
             obj['data'] = data
 
             const status = await fetch(url, {
                 method: 'POST',
                 body: JSON.stringify(obj),
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                },
             })
+            const jsonResponse = await status.json()
+            if ((jsonResponse['msg'] == 'success'))
+                eval('bee_global_functions_main.bee_method_get()')
             document.querySelector('#result p.status_get')?.remove()
             const status_ = document.createElement('p')
             status_.className = 'status_get'
-            status_.textContent = (await status.json())['msg'] || '-'
+            status_.textContent = jsonResponse['msg'] || '-'
             document.querySelector('#result button').after(status_)
+        })
+        deleteButton.addEventListener('click', async () => {
+            const url = window.location.href
+            const polygon = document.querySelector('div#result')
+
+            const values = Array.from(
+                polygon.querySelectorAll('tr[class*="selected_row_to_delete"]')
+            ).map((row) => {
+                return Array.from(row.querySelectorAll('td')).map((item) => {
+                    return item.getAttribute('title')
+                })
+            })
+            await fetch(url, {
+                method: 'DELETE',
+                body: JSON.stringify({ table: table, keys, values }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            eval('bee_global_functions_main.bee_method_get()')
+        })
+        updateButton.addEventListener('click', async () => {
+            const url = window.location.href
+            const polygon = document.querySelector('div#result')
+
+            const values = Array.from(
+                polygon.querySelectorAll('tr[update="true"]')
+            ).map((row) => {
+                return Array.from(row.querySelectorAll('td')).map((item) => {
+                    return [item.getAttribute('title'),
+                    item.getAttribute('update')]
+                })
+            })
+            console.log(values)
+
+            const status = await fetch(url, {
+                method: 'PATCH',
+                body: JSON.stringify({ table: table, keys, values }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            const jsonResponse = await status.json()
+            if ((jsonResponse['msg'] == 'success'))
+                eval('bee_global_functions_main.bee_method_get()')
+            document.querySelector('#result p.status_get')?.remove()
+            const status_ = document.createElement('p')
+            status_.className = 'status_get'
+            status_.textContent = jsonResponse['msg'] || '-'
+            document.querySelector('#result button').after(status_)
+
         })
         document.querySelector('#result').innerHTML = tableElement.outerHTML
         document.querySelector('#result').append(addButton)
+        document.querySelector('#result').append(deleteButton)
+        document.querySelector('#result').append(updateButton)
+
+        document.querySelectorAll('#result table tr[data="true"]').forEach((row) => {
+            row.addEventListener('click', (event: PointerEvent) => {
+                if (event.ctrlKey)
+                    if (!row.querySelector('input'))
+                        row.querySelectorAll('td').forEach(item => {
+                            item.innerHTML = `<input value="${item.innerHTML}"></input>`
+                        })
+                    else
+                        row.querySelectorAll('input').forEach(item => {
+                            console.log(item['value'], item.parentElement.getAttribute('title'))
+                            if (item['value'] !== item.parentElement.getAttribute('title')) {
+                                row.setAttribute('update', 'true')
+                                item.parentElement.setAttribute('update',
+                                    item.parentElement.getAttribute('update')
+                                    || item.parentElement.getAttribute('title'))
+                                item.parentElement.setAttribute('title', item['value'])
+                            }
+                            item.outerHTML = item['value']
+                        })
+                else
+                    if (!row.querySelector('input'))
+                        row.classList.toggle('selected_row_to_delete')
+
+            })
+        })
     } catch {
         console.log('Error while getting data')
-
     }
 }
-
 
 export const main = (auth_): string => {
     const bee = new Bee('main')
     bee.pushBee(header(auth_))
     bee.style('#result', { width: '100%' })
-    bee.style('table, tr', { tableLayout: 'fixed', fontSize: 'auto', width: '100%' })
+    bee.style('.selected_row_to_delete', { background: '#e3185194' })
+    bee.style('button', { margin: '2px' })
+    bee.style('table, tr', {
+        tableLayout: 'fixed',
+        fontSize: 'auto',
+        width: '100%',
+    })
     bee.style('tr', { display: 'table' })
     bee.style('table td', {
         width: '0',
@@ -161,25 +274,34 @@ export const main = (auth_): string => {
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         textAlign: 'center',
-        verticalAlign: 'middle'
+        verticalAlign: 'middle',
     })
     bee.script('new_input', newInput)
     bee.script('get', get)
     bee.script('add', add)
-    bee.script('clear_result', () => { document.querySelector('#result').innerHTML = '' })
+    bee.script('clear_result', () => {
+        document.querySelector('#result').innerHTML = ''
+    })
     bee.script('clear_insert_polygon', () => {
         document.querySelector('div.insert_polygon').innerHTML = ''
         document.querySelector('div.insert_status').innerHTML = ''
     })
-    bee.add(`Hello
+    bee.add(
+        `Hello
     Here is the endpoint for school project :D
-    On the bottom you can find all info about project and database documentation`, 'p').wrap('blockquote')
+    On the bottom you can find all info about project and database documentation`,
+        'p'
+    ).wrap('blockquote')
     const hr = bee.add('', 'hr')
     bee.add('Documentation:', 'p')
-    Object.entries(tables).forEach(item => {
-        bee.add(`b(${item[0]})` + '\n', 'code').post(
-            bee.add('• @0 - @1\n', 'code', {}, { ignore: true }).for(...item[1])
-        ).wrap('pre')
+    Object.entries(tables).forEach((item) => {
+        bee.add(`b(${item[0]})` + '\n', 'code')
+            .post(
+                bee
+                    .add('• @0 - @1\n', 'code', {}, { ignore: true })
+                    .for(...item[1])
+            )
+            .wrap('pre')
     })
     bee.push(hr)
     bee.push(insertOptionsBee('get'))
@@ -190,7 +312,9 @@ export const main = (auth_): string => {
     bee.push(insertOptionsBee('insert'))
     bee.add('ADD', 'button.new_input_button', { on_click: 'new_input' })
     bee.add('INSERT', 'button.insert_button', { on_click: 'add' })
-    bee.add('CLEAR FIELDS', 'button.clear_button', { on_click: 'clear_insert_polygon' })
+    bee.add('CLEAR FIELDS', 'button.clear_button', {
+        on_click: 'clear_insert_polygon',
+    })
     bee.add('', 'div.insert_polygon')
     bee.add('', 'div.insert_status')
 

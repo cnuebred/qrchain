@@ -1,5 +1,5 @@
 import { Bee, scheme } from 'cnuebred_bee'
-const nav = (account: { user?: 'anon', hash?: '' }) => {
+const nav = (account: { user?: 'anon'; hash?: '' }) => {
     const nav_ = new Bee('nav')
     const account_ = account.user ? `${account.user}[#${account.hash}]` : 'anon'
     nav_.add(`${account_}  |  `, 'span')
@@ -9,7 +9,7 @@ const nav = (account: { user?: 'anon', hash?: '' }) => {
         paddingLeft: '20px',
         borderLeft: '3.75px solid rgb(6, 5, 10)',
         borderTopLeftRadius: '3px',
-        borderBottomLeftRadius: '3px'
+        borderBottomLeftRadius: '3px',
     })
     return nav_
 }
@@ -47,15 +47,18 @@ const crypto = () => {
 const onload = () => {
     const onload_ = new Bee('onload')
     const reqSite = async () => {
-        const res = await fetch(window.location.href,
-            { headers: { auth: sessionStorage.getItem('auth') } })
+        const res = await fetch(window.location.href, {
+            headers: { auth: sessionStorage.getItem('auth') },
+        })
         try {
             const newHtml = await res.text()
             const x = new DOMParser().parseFromString(newHtml, 'text/html')
             document.body = x.body
-            document.querySelectorAll('script').forEach(item => {
+            document.querySelectorAll('script').forEach((item) => {
                 item.remove()
-                if (item.getAttribute('build_in') == 'event') { eval(item.text) }
+                if (item.getAttribute('build_in') == 'event') {
+                    eval(item.text)
+                }
                 if (!(item.getAttribute('build_in') == 'toremove'))
                     document.head.appendChild(item)
             })
@@ -79,6 +82,5 @@ const header = (auth?) => {
     header_.pushBee(onload())
     return header_
 }
-
 
 export { header, nav, footer, crypto, onload }
