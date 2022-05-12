@@ -10,3 +10,6 @@ export type MetaRequires = {
     params?: string[]
     body?: string[]
 }
+export type MetaOptions = {
+    hidden?: boolean
+}

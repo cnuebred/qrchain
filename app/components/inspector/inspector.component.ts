@@ -47,7 +47,7 @@ export class Inspector {
         }
         return res.status(200).send(viewInspectorInit())
     }
-    @_get('/login')
+    @_get('/login', {})
     @_auth()
     async login({ res, req, auth_ }) {
         if (auth_?.pass)

@@ -1,13 +1,14 @@
 import { auth } from './auth'
 import { res } from './responses'
-import { ExpressArgs, MetaRequires } from './utils'
+import { ExpressArgs, MetaOptions, MetaRequires } from './utils'
 
 const restMethod = (
     target: Object,
     name: string,
     f: PropertyDescriptor,
     methodType: 'get' | 'post' | 'delete' | 'patch' | 'put',
-    path: string
+    path: string,
+    options: MetaOptions
 ) => {
     const set = target.constructor.prototype
     const setPrefix = `set_${name}`
@@ -17,10 +18,11 @@ const restMethod = (
             path: `${path}`,
             method: [methodType],
             worker: f.value,
+            options
         }
 }
 const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
-    return (path: string = '', requires?: MetaRequires) => {
+    return (path: string = '', requires?: MetaRequires, options?: MetaOptions) => {
         return (target: Object, name: string, f: PropertyDescriptor) => {
             const originalMethod = f.value
             f.value = (args: ExpressArgs) => {
@@ -53,7 +55,7 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
 
                 return originalMethod(args)
             }
-            restMethod(target, name, f, method, path)
+            restMethod(target, name, f, method, path, options)
         }
     }
 }

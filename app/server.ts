@@ -32,7 +32,7 @@ app.get('*', (req, res) => {
     res.send({ error: false, msg: 'default response' })
 })
 
-app.listen(8080, () => {
+app.listen(port, () => {
     logger.log(
         'Server is active on',
         `@{yellow bold}${port}@{normal}`,

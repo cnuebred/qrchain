@@ -2,3 +2,5 @@
 node_modules
 .env
 schema.md
+test.ts
+/build

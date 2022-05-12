@@ -13,11 +13,50 @@ const qr_code = [
     ['hash', 'identifier'],
     ['owner_hash', 'owner of qr code'],
 ]
+const qr_user = [
+    ['hash', 'identifier'],
+    ['member_hash', 'if user is member, here is hash - connector'],
+    ['joined_at', 'b([default]) timestamp when user joined to session'],
+    ['is_member', 'boolean b([default]) false -> with trigger - if member_hash exist - true'],
+    ['is_active', 'boolean b([default]) true'],
+    ['•', '•'],
+    ['b(trigger function on insert)', `
+    create or replace function to_member() returns TRIGGER
+    as 
+    $$
+    BEGIN
+        if NEW.member_hash IS NOT NULL
+            then update qr_user set is_member=true where member_hash=NEW.member_hash;
+        end if;
+    RETURN NULL;
+    END; 
+    $$
+        language plpgsql`],
+]
+const qr_session = [
+    ['hash', 'identifier for qr_session'],
+    ['owner_session', 'hash of owner current session '],
+    ['key_session', 'key session to decode crypto msg (aes-256-cbc)'],
+    ['created_at', 'b([default]) timestamp when session was created'],
+    ['wss', 'websocket address'],
+]
+const user_session = [
+    ['user_hash', 'user\'s hash'],
+    ['session_hash', 'session\'s hash which user is owner'],
+]
+const member_session = [
+    ['member_hash', 'member\'s hash'],
+    ['token_hash', 'jwt session for current member'],
+]
 const tables = {
     qr_member,
     qr_code,
+    qr_user,
+    qr_session,
+    user_session,
+    member_session
 }
-const insertOptions = ['qr_member', 'qr_code']
+const insertOptions = [...Object.keys(tables), ...['active_members']]
 
 const insertOptionsBee = (type: string) => {
     const bee = new Component('@0', 'option', { value: '@0' })
@@ -46,44 +85,6 @@ const newInput = () => {
     document.querySelector('div.insert_polygon').append(container)
 }
 
-const add = async () => {
-    const url = window.location.href
-    const polygon = document.querySelector('div.insert_polygon')
-    const obj = {}
-    const data = {}
-
-    const values = polygon.querySelectorAll('input.value_input_insert')
-    polygon
-        .querySelectorAll('input.key_input_insert')
-        .forEach((item, index) => {
-            data[item['value']] = values[index]?.['value']
-        })
-    console.log(data)
-
-    obj['__table__insert__'] = document.querySelector(
-        'select.select_table_insert'
-    )['value']
-    obj['data'] = data
-
-    const status = await fetch(url, {
-        method: 'POST',
-        body: JSON.stringify(obj),
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    })
-
-    const statusElement = document.createElement('p')
-    try {
-        const json = await status.json()
-        statusElement.textContent = json['msg'].split('_').join(' ') || '-'
-    } catch {
-        statusElement.textContent = '-'
-    }
-    document.querySelector('div.insert_status').innerHTML =
-        statusElement.outerHTML
-}
-
 const get = async () => {
     const url = window.location.href + 'get_db'
     console.log(url)
@@ -97,20 +98,21 @@ const get = async () => {
         const data = await fetch(url + `?table=${table}`)
 
         const sqlTable = await data.json()
-        if (!sqlTable || sqlTable.length == 0) {
+        console.log(sqlTable)
+        if (!sqlTable?.data || !sqlTable?.keys) {
             document.querySelector('#result').innerHTML =
                 '<p>Selected table doesn\'t exist</p>'
             return
         }
-        const keys = Object.keys(sqlTable[0])
+        const keys = sqlTable.keys.map(item => { return item.column_name })
         console.log(keys)
-        const tableKeys = `<tr >${keys
+        const tableKeys = `<tr>${keys
             .map((item) => {
                 return `<th>${item}</th>`
             })
             .join('')}</tr>`
 
-        const tableValues = sqlTable.map((item, index) => {
+        const tableValues = sqlTable.data.map((item, index) => {
             return (
                 '<tr data="true">' +
                 Object.entries(item)
@@ -138,6 +140,32 @@ const get = async () => {
         deleteButton.textContent = 'DELETE'
         updateButton.textContent = 'UPDATE'
 
+        const change_inputs = (row) => {
+            row.querySelectorAll('input').forEach(item => {
+                console.log(item['value'], item.parentElement.getAttribute('title'))
+                if (item['value'] !== item.parentElement.getAttribute('title')) {
+                    row.setAttribute('update', 'true')
+                    item.parentElement.setAttribute('update',
+                        item.parentElement.getAttribute('update')
+                        || item.parentElement.getAttribute('title'))
+                    item.parentElement.setAttribute('title', item['value'])
+                }
+                item.outerHTML = item['value']
+            })
+        }
+
+        const show_status = async (status) => {
+            const jsonResponse = await status.json()
+            console.log(jsonResponse)
+            if ((jsonResponse['msg'] == 'success'))
+                eval('bee_global_functions_main.bee_method_get()')
+            document.querySelector('#result p.status_get')?.remove()
+            const status_ = document.createElement('p')
+            status_.className = 'status_get'
+            status_.textContent = jsonResponse['msg'].replaceAll('_', ' ') || '-'
+            document.querySelector('#result button').after(status_)
+        }
+
         addButton.addEventListener('click', async () => {
             const url = window.location.href
             const polygon = document.querySelector('div#result')
@@ -161,14 +189,7 @@ const get = async () => {
                     'Content-Type': 'application/json',
                 },
             })
-            const jsonResponse = await status.json()
-            if ((jsonResponse['msg'] == 'success'))
-                eval('bee_global_functions_main.bee_method_get()')
-            document.querySelector('#result p.status_get')?.remove()
-            const status_ = document.createElement('p')
-            status_.className = 'status_get'
-            status_.textContent = jsonResponse['msg'] || '-'
-            document.querySelector('#result button').after(status_)
+            await show_status(status)
         })
         deleteButton.addEventListener('click', async () => {
             const url = window.location.href
@@ -181,19 +202,22 @@ const get = async () => {
                     return item.getAttribute('title')
                 })
             })
-            await fetch(url, {
+            const status = await fetch(url, {
                 method: 'DELETE',
                 body: JSON.stringify({ table: table, keys, values }),
                 headers: {
                     'Content-Type': 'application/json',
                 },
             })
-            eval('bee_global_functions_main.bee_method_get()')
+            await show_status(status)
         })
         updateButton.addEventListener('click', async () => {
             const url = window.location.href
             const polygon = document.querySelector('div#result')
-
+            polygon.querySelectorAll('#result tr[data="true"]').forEach(item => {
+                if (item.querySelector('input'))
+                    change_inputs(item)
+            })
             const values = Array.from(
                 polygon.querySelectorAll('tr[update="true"]')
             ).map((row) => {
@@ -202,7 +226,6 @@ const get = async () => {
                     item.getAttribute('update')]
                 })
             })
-            console.log(values)
 
             const status = await fetch(url, {
                 method: 'PATCH',
@@ -211,14 +234,7 @@ const get = async () => {
                     'Content-Type': 'application/json',
                 },
             })
-            const jsonResponse = await status.json()
-            if ((jsonResponse['msg'] == 'success'))
-                eval('bee_global_functions_main.bee_method_get()')
-            document.querySelector('#result p.status_get')?.remove()
-            const status_ = document.createElement('p')
-            status_.className = 'status_get'
-            status_.textContent = jsonResponse['msg'] || '-'
-            document.querySelector('#result button').after(status_)
+            await show_status(status)
 
         })
         document.querySelector('#result').innerHTML = tableElement.outerHTML
@@ -234,17 +250,7 @@ const get = async () => {
                             item.innerHTML = `<input value="${item.innerHTML}"></input>`
                         })
                     else
-                        row.querySelectorAll('input').forEach(item => {
-                            console.log(item['value'], item.parentElement.getAttribute('title'))
-                            if (item['value'] !== item.parentElement.getAttribute('title')) {
-                                row.setAttribute('update', 'true')
-                                item.parentElement.setAttribute('update',
-                                    item.parentElement.getAttribute('update')
-                                    || item.parentElement.getAttribute('title'))
-                                item.parentElement.setAttribute('title', item['value'])
-                            }
-                            item.outerHTML = item['value']
-                        })
+                        change_inputs(row)
                 else
                     if (!row.querySelector('input'))
                         row.classList.toggle('selected_row_to_delete')
@@ -267,9 +273,11 @@ export const main = (auth_): string => {
         fontSize: 'auto',
         width: '100%',
     })
+    bee.style('#result table', { userSelect: 'none' })
     bee.style('tr', { display: 'table' })
-    bee.style('table td', {
-        width: '0',
+    bee.style('.hide', { display: 'none' })
+    bee.style('table td, table input', {
+        width: '100%',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -278,13 +286,13 @@ export const main = (auth_): string => {
     })
     bee.script('new_input', newInput)
     bee.script('get', get)
-    bee.script('add', add)
+    bee.script('hideDesc', (el: Element) => {
+        el.querySelectorAll('code[to_hide="true"]').forEach(item => {
+            item.classList.toggle('hide')
+        })
+    })
     bee.script('clear_result', () => {
         document.querySelector('#result').innerHTML = ''
-    })
-    bee.script('clear_insert_polygon', () => {
-        document.querySelector('div.insert_polygon').innerHTML = ''
-        document.querySelector('div.insert_status').innerHTML = ''
     })
     bee.add(
         `Hello
@@ -298,26 +306,16 @@ export const main = (auth_): string => {
         bee.add(`b(${item[0]})` + '\n', 'code')
             .post(
                 bee
-                    .add('• @0 - @1\n', 'code', {}, { ignore: true })
+                    .add('• @0 - @1\n', 'code.hide', { to_hide: 'true' }, { ignore: true })
                     .for(...item[1])
             )
-            .wrap('pre')
+            .wrap('pre', { on_click: 'hideDesc' })
     })
     bee.push(hr)
     bee.push(insertOptionsBee('get'))
     bee.add('GET', 'button.get_button', { on_click: 'get' })
     bee.add('CLEAR OUTPUT', 'button.clear_button', { on_click: 'clear_result' })
     bee.add('', 'div#result')
-    bee.push(hr)
-    bee.push(insertOptionsBee('insert'))
-    bee.add('ADD', 'button.new_input_button', { on_click: 'new_input' })
-    bee.add('INSERT', 'button.insert_button', { on_click: 'add' })
-    bee.add('CLEAR FIELDS', 'button.clear_button', {
-        on_click: 'clear_insert_polygon',
-    })
-    bee.add('', 'div.insert_polygon')
-    bee.add('', 'div.insert_status')
-
     bee.push(hr)
 
     return bee.print()

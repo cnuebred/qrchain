@@ -1,5 +1,6 @@
 import { Bee, scheme } from 'cnuebred_bee'
 import { leaf } from '../../service/router'
+import { _config } from '../../utils/configuration'
 import { crypto, footer, header, nav, onload } from '../views/main_placeholders'
 
 export const viewInspectorInit = (auth?) => {
@@ -10,7 +11,7 @@ export const viewInspectorInit = (auth?) => {
     )
     init.add('', 'hr')
     init.add('Endpoints: ', 'p')
-    const fullEndpoint = 'http://localhost:8080@4'
+    const fullEndpoint = `http://${_config.server.host}:${_config.server.port}@4`
     init.add(
         `function: @0 | methods: @2 | endpoint: @4 => ${fullEndpoint}`,
         'code'
@@ -21,8 +22,9 @@ export const viewInspectorInit = (auth?) => {
         })
         .for(
             ...leaf.map((item) => {
+                if (item?.options?.hidden) return null
                 return Object.values(item) as string[]
-            })
+            }).filter(item => !!item)
         )
     init.style('.endpoint', { textDecoration: 'none', color: 'white' })
     init.pushBee(footer())
@@ -37,10 +39,13 @@ export const viewInspectorLogin = (auth?) => {
         .add('Hello\nHere is login site to inspector', 'code#header')
         .wrap('pre')
     login.add('', 'hr')
-    login.add('', 'input#login', { placeholder: 'login', value: 'cube' })
+    login.add('', 'input#login', {
+        placeholder: 'login',
+        //value: 'cube'
+    })
     login.add('', 'input#pass', {
         placeholder: 'password',
-        value: 'qr_cnuebred_code!1002',
+        //value: 'qr_cnuebred_code!1002',
     })
     login.add('sign in', 'button', { on_click: 'login' })
     login.add('sign out', 'button', { on_click: 'logout' })

@@ -1,9 +1,11 @@
 import { Bee, scheme } from 'cnuebred_bee'
+import { _config } from '../../utils/configuration'
+
 const nav = (account: { user?: 'anon'; hash?: '' }) => {
     const nav_ = new Bee('nav')
     const account_ = account.user ? `${account.user}[#${account.hash}]` : 'anon'
     nav_.add(`${account_}  |  `, 'span')
-    nav_.add('[home]', 'a', { href: 'http://localhost:8080/inspector' })
+    nav_.add('[home]', 'a', { href: `http://${_config.server.host}:${_config.server.port}/inspector` })
     nav_.add('', 'hr')
     nav_.style('blockquote', {
         paddingLeft: '20px',

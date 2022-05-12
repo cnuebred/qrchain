@@ -1,4 +1,4 @@
-import { Client, DatabaseError, ResultIterator } from 'ts-postgres'
+import { Client, SSLMode } from 'ts-postgres'
 import { logger } from 'ratlogger'
 import { _config } from '../utils/configuration'
 import { postgresqlErrorCodes } from 'ts-postgres/dist/src/errors'
@@ -53,7 +53,6 @@ dataset.prototype.first = function () {
     return this.data.length != 0 ? this.data[0] : null
 }
 
-
 export class Connector {
     client: Client
     constructor() { }
@@ -63,6 +62,7 @@ export class Connector {
             database: database,
             user: user,
             password: password,
+            ssl: SSLMode.Disable
         })
         this.client.connect()
     }
@@ -79,12 +79,17 @@ export class Connector {
     async query<T>(query_: string, { first = true, response = true } = {}): Promise<Dataset<T>> {
         try {
             const result = await this.client.query(query_)
-            if (!response) return new dataset<T>([])
-            if (first) return new dataset<T>([getRecord<T>(result)])
+            if (!response)
+                return new dataset<T>([])
+
+            if (first)
+                return new dataset<T>([getRecord<T>(result)])
             const rows = result.rows.length
             const dataset_ = []
             for (let i = 0; i < rows; i++) dataset_.push(getRecord<T>(result, i))
+
             return new dataset<T>(dataset_)
+
         } catch (err) {
             const error = new dataset([], err.code)
             logger.error('database error:@{white bold}', error.errorMessage())

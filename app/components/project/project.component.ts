@@ -1,4 +1,3 @@
-import { QrMember } from '../../model/inspector.model'
 import { db } from '../../service/connector.module'
 import {
     Controller,
@@ -17,7 +16,7 @@ export class Project {
     main({ res, auth_ }) {
         return res.status(200).send(main(auth_))
     }
-    @_post('/')
+    @_post('/', {}, { hidden: true })
     async post({ req, res }) {
         const table = req.body['__table__insert__']
         const data = req.body['data']
@@ -37,13 +36,11 @@ export class Project {
             msg: databaseResponse.errorMessage() || 'success',
         })
     }
-    @_patch('/')
+    @_patch('/', {}, { hidden: true })
     async patch({ req, res }) {
         if (!req.body || req.body?.values.length == 0) return
-        console.log(req.body)
-        console.log(req.body.values)
-        let errors = []
-        req.body.values.forEach(async value => {
+        const errors = []
+        for (const value of req.body.values) {
             const set = []
             const where = req.body.keys
                 .map((item, index) => {
@@ -57,19 +54,19 @@ export class Project {
                 .filter(item => !!item)
 
             const query = `update ${req.body.table} set ${set.join(' , ')} where ${where.join(' and ')}`
-            console.log(query)
             const status = await db.query(query)
             errors.push(status.errorMessage())
-        })
+        }
         return res.send({
             status: 'ok',
-            msg: errors
+            msg: errors.join(' | ') || 'success'
         })
     }
-    @_delete('/')
+    @_delete('/', {}, { hidden: true })
     async delete({ req, res }) {
         if (!req.body || req.body?.values.length == 0) return
-        req.body.values.forEach(async value => {
+        const errors = []
+        for (const value of req.body.values) {
             const where = req.body.keys
                 .map((item, index) => {
                     if (Date.parse(value[index]) || value[index] == 'null') return null
@@ -77,17 +74,23 @@ export class Project {
                 })
                 .filter(item => !!item)
             const query = `delete from ${req.body.table} where ${where.join(' and ')}`
-            await db.query(query)
-        })
+            const status = await db.query(query)
+            errors.push(status.errorMessage())
+        }
         return res.send({
             status: 'ok',
+            msg: errors.join(' | ') || 'success'
         })
     }
-    @_get('/get_db')
+    @_get('/get_db', {}, { hidden: true })
     async getDb({ req, res }) {
+        const keys = await db.query(`SELECT column_name
+        FROM information_schema.columns
+       WHERE table_name   = '${req.query?.table}'
+       ORDER by ordinal_position asc`, { first: false })
         const data = await db.query(`select * from ${req.query?.table}`, {
             first: false,
         })
-        return res.send(JSON.stringify(data.data))
+        return res.send(JSON.stringify({ keys: keys.data, data: data.data }))
     }
 }

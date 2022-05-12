@@ -49,6 +49,7 @@ export class Router {
                             '/'
                         ),
                         status: true,
+                        options: component.options
                     }
                     try {
                         if (component.path == '')
@@ -70,6 +71,7 @@ export class Router {
     }
     private generateMetaLeaf = async (pcg: Leaf): Promise<void> => {
         Object.entries(pcg).forEach(([key, value]: any[]) => {
+            if (key == 'options') return
             if (key == 'method') value = value.join('.')
             let len = JSON.stringify(value).length
             const metaValue = this.metaleaf[key]
