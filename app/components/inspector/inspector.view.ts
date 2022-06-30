@@ -1,73 +1,108 @@
-import { Bee, scheme } from 'cnuebred_bee'
-import { leaf } from '../../service/router'
+import { Bee, Hive } from 'cnuebred_bee'
+import { leaf } from '../../service/router/router'
 import { _config } from '../../utils/configuration'
-import { crypto, footer, header, nav, onload } from '../views/main_placeholders'
+import { header } from '../common_view/header.view'
 
-export const viewInspectorInit = (auth?) => {
-    const init = new Bee('init')
-    init.pushBee(header(auth))
-    init.add('Hello\nHere is inspector for qrchain server', 'code#header').wrap(
-        'pre'
-    )
-    init.add('', 'hr')
-    init.add('Endpoints: ', 'p')
-    const fullEndpoint = `http://${_config.server.host}:${_config.server.port}@4`
-    init.add(
-        `function: @0 | methods: @2 | endpoint: @4 => ${fullEndpoint}`,
-        'code'
-    )
-        .wrap('pre')
-        .wrap('a.endpoint', {
-            href: fullEndpoint,
-        })
-        .for(
-            ...leaf.map((item) => {
-                if (item?.options?.hidden) return null
-                return Object.values(item) as string[]
-            }).filter(item => !!item)
-        )
-    init.style('.endpoint', { textDecoration: 'none', color: 'white' })
-    init.pushBee(footer())
-    return init.print()
+const site_style = {
+    position: 'absolute',
+    width: '100%',
+    display: 'flex',
+    margin: 'auto',
+    justifyContent: 'space-around'
+}
+const dashboard_style = {
+    position: 'absolute',
+    top: '50px',
+    width: '60%',
+    margin: 'auto',
+    padding: '10px'
 }
 
-export const viewInspectorLogin = (auth?) => {
-    const login = new Bee('login')
-    login.pushBee(header(auth))
-    login.pushBee(crypto())
-    login
-        .add('Hello\nHere is login site to inspector', 'code#header')
-        .wrap('pre')
-    login.add('', 'hr')
-    login.add('', 'input#login', {
-        placeholder: 'login',
-        //value: 'cube'
+export const inspector = (): Hive => {
+    const hive = new Hive('readme')
+    hive.add('', 'meta', {
+        name: 'viewport',
+        content: 'width=device-width, initial-scale=1.0'
     })
-    login.add('', 'input#pass', {
-        placeholder: 'password',
-        //value: 'qr_cnuebred_code!1002',
-    })
-    login.add('sign in', 'button', { on_click: 'login' })
-    login.add('sign out', 'button', { on_click: 'logout' })
-    login.script('login', async () => {
-        const url = window.location.href
-        const login = (document.querySelector('#login')['value'] as string).trim()
-        const password = (document.querySelector('#pass')['value'] as string).trim()
-        const token = eval(`CryptoJS.SHA256('${login}$${password}').toString()`) // sorry for eval :(
-        const res = await fetch(url, { headers: { login, token } })
+    hive.add_package('blog_style')
+    hive.add_package('std_libs', 'crypto')
+    hive.style('body', { margin: '0' })
+    hive.style('.hide_hash_list', { display: 'none' })
+    const hr = new Bee('---')
+    const header_pcg = header('Inspector View')
+    const dashboard = new Bee().style('', dashboard_style)
+    dashboard.push(header_pcg, 'end')
 
-        try {
-            const pcg = await res.json()
-            sessionStorage.setItem('auth', pcg.token)
-            window.location.reload()
-        } catch {
-            console.log('access denied')
+    dashboard.add('###Endpoints##')
+    const row = new Bee('<td>@0</td>').for(['Module', 'Function', 'Methods', 'URL'], 'end').wrap('tr')
+
+    const row_content = row.add('<td>b(@1)</td><td>@0</td><td>@2</td> ', 'tr')
+    row_content.add('@4', 'code', {}).wrap('a', { href: `http://${_config.server.host}:${_config.server.port}@4` }).wrap('td')
+    row_content.for(leaf.map(item => { return Object.values(item) }) as string[][])
+    dashboard.push(row.wrap('table'), 'end')
+    dashboard.push(hr, 'end')
+    dashboard.add('###Login##')
+    dashboard.add('', 'input$login', { placeholder: 'login' })
+    dashboard.add('', 'input$password', { placeholder: 'password' })
+    dashboard.add('Sign in', 'button').click(async ({ worker, ref }) => {
+        const response = await fetch('>{{url}}', {
+            headers: {
+                login: ref.login['value'],
+                token: worker._crypto().SHA256(`${ref.login['value']}_${ref.password['value']}`).toString(),
+            }
+        })
+        const response_pcg = (await response.json())
+        if (response_pcg.status == 'ok') {
+            localStorage.setItem('token', 'Bearer ' + response_pcg.data.token)
+            ref.status.textContent = 'Login successful'
         }
-    })
-    login.script('logout', async () => {
-        sessionStorage.removeItem('auth')
+        else
+            ref.status.textContent = 'Login failed'
+
+        setTimeout(() => { ref.status.textContent = '' }, 5000)
+        window.location.reload()
+
+    }).set_replace({ url: `http://${_config.server.host}:${_config.server.port}/inspector/login` })
+
+    dashboard.add('Logout', 'button').click(async () => {
+        localStorage.removeItem('token')
         window.location.reload()
     })
-    login.pushBee(footer())
-    return login.print()
+    dashboard.add('', 'p$status')
+    dashboard.push(hr, 'end')
+    const mycodes = dashboard.add('###My qr codes @row_number##', 'div.pointer_blog.noselect_blog')
+    mycodes.click(() => {
+        document.querySelector('[ref="my_qr_codes"]').classList.toggle('hide_hash_list')
+    })
+    mycodes.add('code(@hash)', 'pre.hide_hash_list$my_qr_codes')
+
+    mycodes.fetch(`http://${_config.server.host}:${_config.server.port}/qrcode/list?limit=15`, {
+        headers: () => { return { authorization: localStorage.getItem('token') } },
+        res: (result) => {
+            return { hash: result?.qr_codes?.join('<br>') || '', row_number: result?.row_number || '' }
+        }
+    })
+    dashboard.push(hr, 'end')
+
+    const allcodes = dashboard.add('###Root access qr codes @row_number##', 'div.pointer_blog.noselect_blog')
+    allcodes.click(() => {
+        document.querySelector('[ref="root_access"]').classList.toggle('hide_hash_list')
+    })
+    allcodes.add('code(@hash)', 'pre.hide_hash_list$root_access')
+    allcodes.fetch(`http://${_config.server.host}:${_config.server.port}/qrcode/list?root=true`, {
+        headers: () => { return { authorization: localStorage.getItem('token') } },
+        res: (result) => {
+            return { hash: result?.qr_codes?.join('<br>') || '', row_number: result?.row_number || '' }
+        }
+    })
+
+
+
+    dashboard.push(hr, 'end')
+
+    hive.add().style('', site_style).push(dashboard, 'end')
+
+    hive.hive_html({}, false)
+
+    return hive
 }

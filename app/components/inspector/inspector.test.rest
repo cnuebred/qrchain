@@ -1,3 +1,17 @@
-###
+### correct
 GET  http://localhost:8080/inspector/login HTTP/1.1
-bearer: hash
+login: cube
+token: a70c41ac0990e6467f45612061ab000288183c7c71e288669d7f2f886505c22b
+
+### wrong pass 
+GET  http://localhost:8080/inspector/login HTTP/1.1
+login: cube
+token: a70c41ac0990e6467f45612061ab00okw8183c7c71e288669d7f2f886505c22b
+### wrong user 
+GET  http://localhost:8080/inspector/login HTTP/1.1
+login: cubsde
+token: a70c41ac0990e6467f45612061ab000288183c7c71e288669d7f2f886505c22b
+
+### 
+GET  http://localhost:8080/inspector/login HTTP/1.1
+login: cube
