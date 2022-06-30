@@ -2,9 +2,11 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { logger, loggerConfig } from 'ratlogger'
 import ratlogcr from '../.ratlog.js'
-import { db } from './service/connector.module'
-import { Router } from './service/router'
-import { components } from './service/router.module'
+import cors from 'cors'
+import { db } from './service/connector/connector.module'
+import { Router } from './service/router/router'
+import { components } from './service/router/router.module'
+import { setUpActives, wss } from './service/websocket/socket.module'
 import { setupConfig, _config } from './utils/configuration'
 const buildStart = performance.now()
 
@@ -14,10 +16,11 @@ setupConfig()
 loggerConfig(ratlogcr)
 const { port, host } = _config.server
 
-//db
+// db
 db.connect()
-
-//
+// wss
+wss.run()
+setUpActives()
 
 const app = express()
 app.use(express.json())
@@ -27,6 +30,8 @@ router.setup(app)
 router.show()
 
 logger.log('\n', '@{bold}Started the server process', '\n')
+
+app.use(cors())
 
 app.get('*', (req, res) => {
     res.send({ error: false, msg: 'default response' })
