@@ -1,11 +1,18 @@
-import { QrMember } from '../model/inspector.model'
-import { db } from '../service/connector.module'
+import { QrMember } from '../model/qrchain.model'
+import { db } from '../service/connector/connector.module'
+import { _config } from './configuration'
 import { decodeToken } from './crypto'
+import { Auth } from './utils'
 
-const verifySession = async (hash: string) => {
+const types = {
+    Bearer: 'verify_session'
+}
+
+const verifySession = async (hash: string, type: string) => {
+    const auth_db = _config.auth.db[types[type]]
     return await db.run(async (client) => {
         const user = client.query(
-            `select token_hash from member_session where member_hash='${hash}'`
+            `select ${auth_db[0]} from ${auth_db[1]} where ${auth_db[2]}='${hash}'`
         )
         const match = await user.first()
         return { token_hash: match.get('token_hash') }
@@ -14,11 +21,13 @@ const verifySession = async (hash: string) => {
 const getMemberData = async (hash: string) => {
     return (await db.query<QrMember>(`select * from qr_member where hash='${hash}'`)).first() || {}
 }
-export const auth = async (token?: string) => {
-    if (!token || token == 'null') return { pass: false }
+export const auth = async (token_?: string): Promise<Auth> => {
+    if (!token_ || token_ == 'null') return { pass: false }
+    const [type, token] = token_.split(' ') // add options for type
     const obj: { [index: string]: any } = decodeToken(token)
-    const { data, error } = await verifySession(obj['hash'])
+    const { data, error } = await verifySession(obj['hash'], type)
     if (error) return { pass: false }
     if (data.get('token_hash') == token)
-        return { pass: true, ...(await getMemberData(obj['hash'])), token: obj }
+        return { pass: true, data: (await getMemberData(obj['hash'])), token: obj }
+    else return { pass: false }
 }
