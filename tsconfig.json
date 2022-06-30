@@ -2,7 +2,7 @@
     "compilerOptions": {
         "target": "ES2021",
         "experimentalDecorators": true,
-        "module": "commonjs",
+        "module": "none",
         "moduleResolution": "node",
         "esModuleInterop": true,
         "sourceMap": false,
