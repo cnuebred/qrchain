@@ -1,5 +1,5 @@
 import { auth } from './auth'
-import { res } from './responses'
+import { resp } from './responses'
 import { ExpressArgs, MetaOptions, MetaRequires } from './utils'
 
 const restMethod = (
@@ -27,15 +27,21 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
             const originalMethod = f.value
             f.value = (args: ExpressArgs) => {
                 const notContains = {}
+                const contains = {}
                 if (requires)
                     Object.entries(requires).forEach(([meta, properties]) => {
                         notContains[meta] = []
+                        contains[meta] = {}
                         if (!args.req[meta]) return
                         const keys = Object.keys(args.req[meta])
                         properties.forEach((item) => {
                             if (!item) return
-                            if (!keys.includes(item))
+                            if (!keys.includes(item) && !item.endsWith('?'))
                                 notContains[meta].push(item)
+                            else {
+                                if (item.endsWith('?')) item = item.slice(0, -1)
+                                contains[meta][item] = args.req[meta][item]
+                            }
                         })
                     })
                 const notContainsCondition =
@@ -46,14 +52,9 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
                 if (notContainsCondition)
                     return args.res
                         .status(401)
-                        .send(
-                            res()
-                                .err()
-                                .msg('Missing require data')
-                                .data(notContains).response
-                        )
+                        .send(resp('Missing require data', notContains).err())
 
-                return originalMethod(args)
+                return originalMethod({ ...args, ...contains })
             }
             restMethod(target, name, f, method, path, options)
         }
@@ -61,13 +62,17 @@ const restWrapper = (method: 'get' | 'post' | 'delete' | 'patch' | 'put') => {
 }
 
 export function _auth(
-    transfer: 'headers' | 'query' | 'params' = 'headers',
-    value: string = 'auth'
+    gate: boolean = true,
+    transfer: 'headers' | 'query' | 'body' | 'params' = 'headers',
+    value: string = 'authorization'
 ) {
     return (target: Object, name: string, f: PropertyDescriptor) => {
         const originalMethod = f.value
         f.value = async (args: ExpressArgs) => {
             const auth_ = await auth(args.req[transfer][value] as string)
+            if (gate && !auth_.pass) return args.res
+                .status(401)
+                .send(resp('Missing access').err())
             return originalMethod({ ...args, auth_ })
         }
     }
@@ -77,6 +82,7 @@ export function Controller(name: string, parent?: string) {
     return function <T extends { new(...args: any[]): {} }>(constructor: T) {
         constructor.prototype['__root__'] = { name, parent }
         constructor.prototype['__name__'] = constructor.name
+        constructor.prototype['__init__']
         return class extends constructor { }
     }
 }

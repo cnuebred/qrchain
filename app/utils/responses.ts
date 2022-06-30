@@ -1,25 +1,45 @@
-export const res = (response?): any => {
+import { logger } from 'ratlogger'
+
+
+type Response = {
+    status: string
+    msg: string
+    data: { [index: string]: string }
+    err: (status?: string, options?: { hide?: boolean, log?: boolean }) => Response
+    push: (status?: string, options?: { hide?: boolean, log?: boolean }) => string
+    ok: (status?: string, options?: { hide?: boolean, log?: boolean }) => Response
+    fail: (status?: string, options?: { hide?: boolean, log?: boolean }) => Response
+    hide: () => string
+    log: () => Response
+}
+type ResponseStatus = { hide?: boolean, log?: boolean }
+
+export const resp = (msg: string = '', data: { [index: string]: string } = {}): Response => {
     return {
-        response: response || {
-            status: 'ok',
-            msg: '',
-            data: {},
+        status: '',
+        msg: msg,
+        data: data,
+        push(status?: string, options: ResponseStatus = { hide: false, log: false }) {
+            this.status = status
+            if (options.hide) return this.hide()
+            return this
         },
-        ok() {
-            this.response.status = 'ok'
-            return res(this.response)
+        err(status: string = 'error', options: ResponseStatus) {
+            return this.push(status, options)
         },
-        err() {
-            this.response.status = 'error'
-            return res(this.response)
+        fail(status: string = 'fail', options: ResponseStatus) {
+            return this.push(status, options)
         },
-        msg(...msg) {
-            this.response.msg = msg.join(' ')
-            return res(this.response)
+        ok(status: string = 'ok', options: ResponseStatus) {
+            return this.push(status, options)
         },
-        data(data: { [index: string]: string }) {
-            this.response.data = data
-            return res(this.response)
+        hide() {
+            return Buffer.from(JSON.stringify(this)).toString('base64')
         },
+        log() {
+            logger.log(this.hide())
+            return this
+        }
+
     }
 }
